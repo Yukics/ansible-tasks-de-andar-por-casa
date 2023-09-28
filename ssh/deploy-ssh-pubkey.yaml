@@ -1,0 +1,24 @@
+# [defaults]
+# host_key_checking = False
+# comand:  ansible-playbook -i hosts playbooks/deploy-ssh-pubkey.yaml
+---
+- hosts: all
+  gather_facts: false
+  vars:
+    ansible_user: root
+    home_path: /home/{{ ansible_user}}
+  tasks:
+  - set_fact: home_path="/root"
+    when: ansible_user=="root"
+  - name: make direcotry
+    file:
+      path: "{{ home_path.stdout }}/.ssh"
+      state: directory4
+  - name: create empty file
+    file:
+      path: "{{ home_path.stdout }}/.ssh/authorized_keys"
+      state: touch
+  - name: put pubkey
+    lineinfile:
+      path: "{{ home_path.stdout }}/.ssh/authorized_keys"
+      line: "{{ lookup('ansible.builtin.file', '/root/.ssh/id_rsa.pub') }}"
