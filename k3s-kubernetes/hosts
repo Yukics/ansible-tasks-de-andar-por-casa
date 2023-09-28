@@ -1,0 +1,14 @@
+[kubernetes_master_nodes]
+agnosia ansible_host=agnosia.yuki.es
+
+[kubernetes_worker_nodes]
+behavorismo ansible_host=behavorismo.yuki.es
+catarsis ansible_host=catarsis.yuki.es
+
+[kubernetes:children]
+kubernetes_worker_nodes
+kubernetes_master_nodes
+
+[kubernetes:vars]
+ansible_ssh_user=yuki
+
