@@ -26,7 +26,7 @@
       SECRET: "{{ secret_tokens.results[0].stdout_lines[-1] }}"
       URL: "{{ ansible_default_ipv4.address }}"
     run_once: true
-  - name: Retrieve kubeconfig.yaml
+  - name: "Retrieve kubeconfig.yaml"
     fetch:
       src: /etc/rancher/k3s/k3s.yaml
       dest: ../kubeconfig.yaml
@@ -34,6 +34,13 @@
     delegate_to: "{{ item }}"
     delegate_facts: true
     loop: "{{ groups['kubernetes_master_nodes'] }}"
+    run_once: true
+  - name: "Replace 127.0.0.1 with {{ ansible_default_ipv4.address }}"
+    replace:
+      path: ../kubeconfig.yaml
+      regexp: '127.0.0.1'
+      replace: '{{ ansible_default_ipv4.address }}'
+    delegate_to: localhost
     run_once: true
 - name: Set up workers
   hosts: kubernetes_worker_nodes
