@@ -21,4 +21,4 @@
   - name: put pubkey
     lineinfile:
       path: "{{ home_path.stdout }}/.ssh/authorized_keys"
-      line: "{{ lookup('ansible.builtin.file', '/root/.ssh/id_rsa.pub') }}"
+      line: "{{ lookup('ansible.builtin.file', '~/.ssh/id_rsa.pub') }}"
