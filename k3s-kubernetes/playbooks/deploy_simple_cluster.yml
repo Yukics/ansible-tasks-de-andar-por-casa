@@ -5,14 +5,17 @@
   become_method: su
   become_user: root
   tasks:
+
   - name: Populate service facts
     service_facts:
+
   - name: Install K3S Master
     shell: "curl -sfL https://get.k3s.io | sh - && exit 0 || exit 1"
     delegate_to: "{{ item }}"
     delegate_facts: true
     loop: "{{ groups['kubernetes_master_nodes'] }}"
     when: "'k3s' not in services"
+  
   - name: Get token
     shell: "cat /var/lib/rancher/k3s/server/node-token && exit 0 || exit 1"
     delegate_to: "{{ item }}"
@@ -20,12 +23,14 @@
     loop: "{{ groups['kubernetes_master_nodes'] }}"
     register: secret_tokens
     run_once: true
+  
   - name: Register host with variable
     add_host:
       name: "MASTER_NODE"
       SECRET: "{{ secret_tokens.results[0].stdout_lines[-1] }}"
       URL: "{{ ansible_default_ipv4.address }}"
     run_once: true
+  
   - name: "Retrieve kubeconfig.yaml"
     fetch:
       src: /etc/rancher/k3s/k3s.yaml
@@ -35,6 +40,7 @@
     delegate_facts: true
     loop: "{{ groups['kubernetes_master_nodes'] }}"
     run_once: true
+  
   - name: "Replace 127.0.0.1 with {{ ansible_default_ipv4.address }}"
     replace:
       path: ../kubeconfig.yaml
@@ -42,6 +48,7 @@
       replace: '{{ ansible_default_ipv4.address }}'
     delegate_to: localhost
     run_once: true
+
 - name: Set up workers
   hosts: kubernetes_worker_nodes
   become: yes
@@ -49,8 +56,10 @@
   become_user: root
   strategy: free
   tasks:
+  
   - name: Populate service facts
     service_facts:
+  
   - name: Install K3S on Workers
     shell: "curl -sfL https://get.k3s.io | K3S_URL=https://{{ hostvars['MASTER_NODE']['URL'] }} K3S_TOKEN={{ hostvars['MASTER_NODE']['SECRET'] }} sh - && exit 0 || exit 1"
     when: "'k3s-agent' not in services"
