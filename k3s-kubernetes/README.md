@@ -1,3 +1,5 @@
+This playbooks has been tested on Debian 12
+
 Modify `hosts` file:
 + master
 + workers
