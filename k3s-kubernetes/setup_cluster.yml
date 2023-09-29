@@ -1,0 +1,3 @@
+---
+- import_playbook: playbooks/prerequisites.yml
+- import_playbook: playbooks/deploy_simple_cluster.yml

@@ -1,9 +1,9 @@
 [kubernetes_master_nodes]
-agnosia ansible_host=agnosia.yuki.es
+agnosia ansible_ssh_host=192.168.69.249
 
 [kubernetes_worker_nodes]
-behavorismo ansible_host=behavorismo.yuki.es
-catarsis ansible_host=catarsis.yuki.es
+behavorismo ansible_ssh_host=192.168.69.248
+catarsis ansible_ssh_host=192.168.69.247
 
 [kubernetes:children]
 kubernetes_worker_nodes
