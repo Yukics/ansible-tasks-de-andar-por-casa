@@ -28,7 +28,7 @@
     add_host:
       name: "MASTER_NODE"
       SECRET: "{{ secret_tokens.results[0].stdout_lines[-1] }}"
-      URL: "{{ ansible_default_ipv4.address }}"
+      URL: "{{ ansible_default_ipv4.address }}:6443"
     run_once: true
   
   - name: "Retrieve kubeconfig.yaml"
