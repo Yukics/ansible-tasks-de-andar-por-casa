@@ -60,6 +60,8 @@
       shell: |
         txt=`hostname`
         echo "${txt: -1}" > /var/zookeeper/myid
+      args:
+        executable: /bin/bash
     
     - name: "Zookeeper properties"
       copy:
