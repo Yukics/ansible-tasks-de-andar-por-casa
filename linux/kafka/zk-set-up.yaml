@@ -18,26 +18,62 @@
       shell: |
         sysctl vm.swappiness=1
         echo 'vm.swappiness=1' | sudo tee --append /etc/sysctl.conf
-    
+
+    - name: "Create zookeper user"
+      user:
+        name: zookeper
+        shell: /usr/sbin/nologin
+
     - name: "Download zookeper and kafka"
       shell: |
         wget https://www.apache.org/dyn/closer.lua/zookeeper/zookeeper-3.8.3/apache-zookeeper-3.8.3-bin.tar.gz
         tar -xvf apache-zookeeper-3.8.3-bin.tar.gz
         rm apache-zookeeper-3.8.3-bin.tar.gz
         mv apache-zookeeper-3.8.3-bin /opt/zookeper
-
-    - name: "Create zookeper user"
-      user:
-        name: zookeper
-        shell: /usr/sbin/nologin
     
-    - name: "Create data zookeper folder"
+    - name: "Set up zookeper folder permissions"
       file:
-        path: /data/zookeper
+        path: /opt/zookeper
         state: directory
         owner: zookeper
         group: zookeper
+        recurse: yes
+    
+    - name: "Create data zookeper folder"
+      file:
+        path: /var/zookeeper
+        state: directory
+        owner: zookeper
+        group: zookeper
+        recurse: yes
+    
+    - name: "Zookeper properties"
+      copy:
+        src: ./conf/zookeper/zookeper.properties
+        dest: /opt/zookeper/conf/zoo.cfg
+        owner: zookeper
+        group: zookeper
+        mode: '0644'
 
+    
+    - name: "Configure systemd service"
+      copy:
+        src: ./conf/systemd/zookeper.service
+        dest: /etc/systemd/system/zookeeper.service
+        owner: root
+        group: root
+        mode: '0644'
+    
+    - name: "Configure systemd service"
+      copy:
+        src: ./conf/systemd/zookeper.service
+        dest: /etc/systemd/system/zookeeper.service
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: "systemctl daemon-reload"
+      shell: systemctl daemon-reload
 
 # latest kafka version
 # wget https://downloads.apache.org/kafka/3.6.0/kafka_2.12-3.6.0.tgz
