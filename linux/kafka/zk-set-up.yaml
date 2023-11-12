@@ -89,6 +89,8 @@
           server.1=zk1.yuki.es:2888:3888
           server.2=zk2.yuki.es:2888:3888
           server.3=zk3.yuki.es:2888:3888
+          # enable all 4 letter words
+          4lw.commands.whitelist=*
     
     - name: "Configure systemd service"
       copy:
