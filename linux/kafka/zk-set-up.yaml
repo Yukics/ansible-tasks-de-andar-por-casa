@@ -51,6 +51,10 @@
         group: zookeeper
         recurse: yes
     
+    - name: "Assign id"
+      shell: |
+        echo "${`hostname`: -1}" > /var/zookeeper/myid
+    
     - name: "Zookeeper properties"
       copy:
         # src: "{{ playbook_dir }}/conf/zookeeper/zookeeper.properties"
@@ -97,6 +101,7 @@
           WorkingDirectory=/opt/zookeeper
           User=zookeeper
           Group=zookeeper
+          Enviroment="JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre"
           ExecStart=/opt/zookeeper/bin/zkServer.sh start /opt/zookeeper/conf/zoo.cfg
           ExecStop=/opt/zookeeper/bin/zkServer.sh stop /opt/zookeeper/conf/zoo.cfg
           ExecReload=/opt/zookeeper/bin/zkServer.sh restart /opt/zookeeper/conf/zoo.cfg
