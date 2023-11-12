@@ -52,19 +52,10 @@
     
     - name: "Zookeper properties"
       copy:
-        src: "{{ playbook_dir }}/conf/zookeper/zookeper.properties"
+        # src: "{{ playbook_dir }}/conf/zookeper/zookeper.properties"
         dest: /opt/zookeper/conf/zoo.cfg
         owner: zookeper
         group: zookeper
-        mode: '0644'
-
-    
-    - name: "Configure zookeper"
-      copy:
-        # src: "{{ playbook_dir }}/conf/systemd/zookeper.service"
-        dest: /etc/systemd/system/zookeeper.service
-        owner: root
-        group: root
         mode: '0644'
         content: |
           # the location to store the in-memory database snapshots and, unless specified otherwise, the transaction log of updates to the database.
