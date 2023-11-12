@@ -32,18 +32,4 @@
         reboot_timeout: 300
         post_reboot_delay: 20
         test_command: whoami
-      when: reboot_required_file.stat.exists == true
-
-    - debug: var=hostvars 
-
-    - name: "Send notification"
-      ansible.builtin.uri:
-        url: https://chat.googleapis.com/v1/spaces/AAAAlCHjbao/messages?key=...
-        method: POST
-        headers:
-          Content-Type: "application/json; charset=UTF-8"
-        body_format: json
-        body:
-          text: "*Executed on:* {{ ansible_hostname }}\n*Playbook executed:* {{ ansible_play_name }}\n"
-      run_once: True
-      
+      when: reboot_required_file.stat.exists == true      
