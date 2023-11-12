@@ -1,5 +1,7 @@
 - name: "Set up Zookepers"
   hosts: all
+  vars:
+    version: 3.8.3
   tasks:
     - name: "Apt update and install packages"
       apt:
@@ -26,10 +28,10 @@
 
     - name: "Download zookeper and kafka"
       shell: |
-        wget https://dlcdn.apache.org/zookeeper/zookeeper-3.8.3/apache-zookeeper-3.8.3-bin.tar.gz
-        tar -xvf apache-zookeeper-3.8.3-bin.tar.gz
-        rm apache-zookeeper-3.8.3-bin.tar.gz
-        mv apache-zookeeper-3.8.3-bin /opt/zookeper
+        wget https://dlcdn.apache.org/zookeeper/zookeeper-{{ version }}/apache-zookeeper-{{ version }}-bin.tar.gz
+        tar -xvf apache-zookeeper-{{ version }}-bin.tar.gz
+        rm apache-zookeeper-{{ version }}-bin.tar.gz
+        mv apache-zookeeper-{{ version }}-bin /opt/zookeper
     
     - name: "Set up zookeper folder permissions"
       file:
