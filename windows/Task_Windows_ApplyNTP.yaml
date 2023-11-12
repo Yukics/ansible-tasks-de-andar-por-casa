@@ -1,0 +1,25 @@
+- name: Deinir server NTP
+  hosts: all
+  tasks:
+  vars:
+    ntp1: ntp1.yuk.es
+    ntp2: ntp2.yuk.es
+  - name: Execute NTP script
+    ansible.windows.win_powershell: 
+      script: |
+        #Enabled w32tm debug
+        w32tm /debug /enable /file:C:\w32tmdebug.log /size:10485760 /entries:0-300
+
+        #Configure NTP
+        Push-Location
+        Set-Location HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DateTime\Servers
+        Set-ItemProperty . 1 "{{ ntp1 }}"
+        Set-ItemProperty . 2 "{{ ntp2 }}"
+        Set-ItemProperty . "(Default)" "1"
+        Set-Location HKLM:\SYSTEM\CurrentControlSet\services\W32Time\Parameters
+        #0x8 - client ; 0xA - client + use as fallback
+        Set-ItemProperty . NtpServer "{{ ntp1 }},0x8 {{ ntp2 }},0xA"
+        Pop-Location
+        Get-Service -Name W32Time | Restart-Service
+
+

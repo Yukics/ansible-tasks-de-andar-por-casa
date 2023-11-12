@@ -1,0 +1,115 @@
+- name: Add ubuntus to AD
+  hosts: all
+  become_method: sudo
+  become: yes #Aunque el linter lo corrija es con yes
+  tasks:
+    - name: "Call bahul"
+      ansible.builtin.uri:
+        url: https://bahul.yuki.es/api/ansibleAD
+        method: GET
+        headers:
+          x-token: "{{ token }}"
+      register: "aduser"
+
+    # Pone el nombre con FQDN (nombre.yuki.es) a la máquina
+    - name: Define correct hostname if needed
+      shell: if ! hostname | grep yuki.es ; then hostnamectl set-hostname $(hostname).yuki.es; fi
+    
+    # * UBUNTU 20.04
+    - name: Set up repos
+      blockinfile:
+        path: /etc/apt/sources.list
+        block: |
+          deb http://us.archive.ubuntu.com/ubuntu/ bionic universe
+          deb http://us.archive.ubuntu.com/ubuntu/ bionic-updates universe
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    - name: Install multiple necessary packages
+      apt: 
+        pkg: 
+          - realmd 
+          - libnss-sss 
+          - libpam-sss 
+          - sssd 
+          - sssd-tools 
+          - adcli 
+          - samba-common-bin
+          - oddjob 
+          - oddjob-mkhomedir 
+          - packagekit
+        update_cache: yes
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    - name: Start realmd
+      service:
+        name: sssd
+        state: restarted
+        enabled: yes
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    - name: Replace default no to yes
+      replace:
+        path: /usr/share/pam-configs/mkhomedir
+        regexp: 'Default: no'
+        replace: "Default: yes"
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+      #* File content /usr/share/pam-configs/mkhomedir
+      # Name: Create home directory on login
+      # Default: yes
+      # Priority: 0
+      # Session-Type: Additional
+      # Session-Interactive-Only: yes
+      # Session:
+      #         optional                        pam_mkhomedir.so
+    
+    # Agrega a la configuración de PAM el módulo mkhomedir
+    - name: Enable pam-auth module
+      blockinfile:
+        path: /etc/pam.d/common-session
+        block: |
+          session optional                        pam_mkhomedir.so
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    # Aplica los cambios (en principio este --enable hace lo mismo que el bloque de arriba pero está bugeado)
+    - name: Refresh pam-auth-update
+      shell : pam-auth-update --force --enable mkhomedir && pam-auth-update --package
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    # * UBUNTU 22.04
+    - name: Install multiple necessary packages
+      apt: 
+        pkg: 
+          - sssd-ad 
+          - sssd-tools
+          - realmd
+          - adcli 
+        update_cache: yes
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "22.04"
+    
+    - name: Enable mkhomedir module
+      shell: pam-auth-update --enable mkhomedir
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "22.04"
+
+    # * ALL
+    - name: Join yuki domain
+      # Usando el aduser de arriba del todo agregamos el host al AD
+      shell: echo "{{ aduser.json.body.pass }}" | realm join -U {{ aduser.json.body.user }} yuki.es
+      
+    # Permitimos al grupo LinuxAdmins el acceso
+    - name: Allow AD users in LinuxAdmins group to log in
+      shell : realm deny --all && realm permit -g 'LinuxAdmins'
+
+    # Definimos permisos de sudo a LinuxAdmins
+    - name: Add to sudoers LinuxAdmins group
+      blockinfile:
+        path: /etc/sudoers.d/domain_admins
+        create: yes
+        block: |
+          %linuxadmins@yuki.es     ALL=(ALL)   ALL
+
+    # Reinicia el servicio de autenticación SSSD
+    - name: Restart sssd auth provider
+      service:
+        name: sssd
+        state: restarted
+        enabled: yes

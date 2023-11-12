@@ -1,0 +1,214 @@
+# Referencias: https://www.edmundofuentes.com/blog/2018/11/19/enable-ntp-ubuntu-18-04/
+# Tambien hay algo documentado en nuestro confluence
+- name: Deinir server NTP
+  hosts: all
+  become: yes
+  tasks:
+    # * UBUNTU 22.04
+    - name: Install package systemd-timesyncd
+      ansible.builtin.apt:
+        name: systemd-timesyncd
+        state: latest
+        update_cache: yes
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "22.04"
+
+    - name: Set up NTP server on /etc/systemd/timesync.conf
+      lineinfile:
+        dest: /etc/systemd/timesyncd.conf
+        regexp: ^NTP=.*
+        insertafter: ^#NTP=
+        line: NTP=sullust.yuki.es
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "22.04"
+
+    - name: Set up NTP Fallback server on /etc/systemd/timesync.conf
+      lineinfile:
+        dest: /etc/systemd/timesyncd.conf
+        regexp: ^FallbackNTP=.*
+        insertafter: ^#FallbackNTP=
+        line: FallbackNTP=sullust.yuki.es
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "22.04"
+
+    - name: Set up NTP Root distance server on /etc/systemd/timesync.conf
+      lineinfile:
+        dest: /etc/systemd/timesyncd.conf
+        regexp: ^RootDistanceMaxSec=.*
+        insertafter: ^#RootDistanceMaxSec=
+        line: RootDistanceMaxSec=30
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "22.04"
+    
+    - name: Set timezone
+      shell: timedatectl set-timezone Europe/Madrid
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "22.04"
+
+    - name: Set NTP enable
+      shell: timedatectl set-ntp true
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "22.04"
+
+    - name: Restart timsync service
+      systemd:
+        name: systemd-timesyncd 
+        state: restarted 
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "22.04"
+
+    - name: Debug result
+      shell: timedatectl timesync-status && date
+      register: result
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "22.04"
+    - debug: var=result.stdout_lines
+
+    # * UBUNTU 20.04
+    - name: Check if timesyncd is enabled
+      ansible.builtin.shell: |
+        /usr/bin/timedatectl | grep active | awk '{print $3}'
+      args:
+        executable: /bin/bash
+      register: check
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    - name: Disable timesycnd if it was enabled
+      ansible.builtin.shell: |
+        /usr/bin/timedatectl set-ntp no
+      when: check == "yes" and ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    - name: Check if Service systemd-timesyncd exists
+      stat: path=/etc/init.d/systemd-timesyncd
+      register: service_exist
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    - name: Disable service timesync if exists
+      systemd:
+        name: systemd-timesyncd 
+        state: stopped 
+        enabled: no 
+        masked: no
+      when: service_exist and ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    - name: Install ntpd
+      apt:
+        name: ntp
+        update_cache: yes
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    - name: Removing default ntp conf
+      replace:
+        path: /etc/ntp.conf
+        regexp: "^server.*"
+        replace: ""
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+      
+    - name: Removing default pools
+      replace:
+        path: /etc/ntp.conf
+        regexp: "^pool.*"
+        replace: ""
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    - name: Add ntp servers
+      shell: |
+        /bin/echo "server masssanella.yuki.es prefer iburst" >> /etc/ntp.conf &&
+        /bin/echo "server sullust.yuki.es iburst" >> /etc/ntp.conf &&
+        /bin/echo "pool masssanella.yuki.es prefer iburst" >> /etc/ntp.conf &&
+        /bin/echo "pool sullust.yuki.es iburst" >> /etc/ntp.conf
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    - name: Stop ntpd service
+      systemd: 
+        name: ntp 
+        state: stopped 
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+          
+    - name: Force sync from ntp server
+      ansible.builtin.shell: |
+        ntpd -gq
+      when: check == "yes" and ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    - name: Start ntpd service
+      systemd: 
+        name: ntp 
+        state: started 
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    - name: Set up and check result
+      ansible.builtin.shell: |
+        ntpq -p  
+      args:
+        executable: /bin/bash
+      register: output
+      when: ansible_facts['distribution'] == "Ubuntu" and ansible_facts['distribution_version'] ==  "20.04"
+
+    - debug: msg="{{ ansible_hostname }} {{ output }}"
+
+#! Multiple tests, sorry por el sindrome de diogenes
+# - name: Install things
+#   ansible.builtin.shell: |
+#     export DEBIAN_FRONTEND=noninteractive &&
+#     /usr/bin/apt-get update -y --fix-missing && 
+#     /usr/bin/apt-get install systemd-timesyncd -y
+#   args:
+#     executable: /bin/bash
+
+
+
+# - name: Definimos el server NTP en la configuración
+#   lineinfile:
+#     dest: /etc/systemd/timesyncd.conf
+#     regexp: ^NTP=.*
+#     insertafter: ^#NTP=
+#     line: NTP=sullust.yuki.es
+
+# - name: Make sure ntp is started, and is enabled on restart.
+#   systemd: 
+#     name: systemd-timesyncd 
+#     state: restarted 
+#     enabled: yes 
+#     masked: no
+# - name: Make sure ntp is started, and is enabled on restart.
+#   systemd: 
+#     name: ntp 
+#     state: started 
+#     enabled: yes 
+#     masked: no
+
+# - name: Install things
+#   ansible.builtin.shell: |
+#     export DEBIAN_FRONTEND=noninteractive &&
+#     /usr/bin/apt-get update -y--fix-missing && 
+#     /usr/bin/apt-get install systemd-timesyncd ntp -y
+#   args:
+#     executable: /bin/bash
+
+
+# - name: Make sure systemd-timesyncd is started, and is enabled on restart.
+#   systemd: 
+#     name: systemd-timesyncd 
+#     state: started 
+#     enabled: yes 
+#     masked: no
+
+# - name: Conf timesync
+#   replace:
+#     path: /etc/systemd/timesyncd.conf
+#     regexp: '^#NTP=.*'
+#     replace: 'NTP=sullust.yuki.es'
+
+# - name: Enable timesync
+#   ansible.builtin.shell: |
+#     /bin/systemctl unmask systemd-timesyncd.service &&
+#     /bin/systemctl enable systemd-timesyncd.service &&
+#     /bin/systemctl start systemd-timesyncd.service
+#   args:
+#     executable: /bin/bash
+
+
+# - name: Add to /etc/ntp.conf servers
+#   ansible.builtin.shell: |
+#     /bin/systemctl unmask ntp.service &&
+#     /bin/systemctl enable ntp.service &&
+#     /bin/systemctl enable ntp &&
+#     /bin/systemctl restart ntp &&
+#     /usr/bin/timedatectl set-timezone Europe/Madrid &&
+#     /usr/bin/timedatectl set-ntp on &&
+#     ntpq -p
+#   args:
+#     executable: /bin/bash
+#   register: output

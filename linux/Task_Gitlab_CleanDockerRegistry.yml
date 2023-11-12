@@ -1,0 +1,21 @@
+# Reference: https://www.howtogeek.com/devops/how-to-garbage-collect-the-gitlab-container-registry-to-free-up-storage/#:~:text=Visit%20your%20project%20in%20GitLab,to%20activate%20the%20Cleanup%20Policy.
+- name: "Gitlab registry garbage collector execution"
+  hosts: all
+  become: yes
+  become_user: root
+  tasks:
+    - name: "Execute script"
+      shell: |
+        cd /home/user/pr_gitlab && docker compose exec gitlab gitlab-ctl registry-garbage-collect -m
+        - name: "Send notification"
+        
+    - name: "Send notification"
+      ansible.builtin.uri:
+        url: https://chat.googleapis.com/v1/spaces/AAAAlCHjbao/messages?key=...
+        method: POST
+        headers:
+          Content-Type: "application/json; charset=UTF-8"
+        body_format: json
+        body:
+          text: "*Executed on:* {{ ansible_hostname }}\n*Playbook executed:* {{ ansible_play_name }}\nRegistry images marked to be removed are now deleted!\n"
+

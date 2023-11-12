@@ -1,0 +1,124 @@
+---
+- hosts: all
+  become: true
+  serial: "{{ serial_override|default(1)}}"
+  gather_facts: false
+  tasks:
+  - name: Haproxy maint mode
+    haproxy:
+      state: disabled
+      host: "{{inventory_hostname}}-{{item.1}}"
+      socket: /run/haproxy/admin.sock
+      backend: api
+      fail_on_not_found: yes
+      wait: yes
+      drain: yes
+      wait_interval: 10
+      wait_retries: 10
+    delegate_to: "{{item.0}}"
+    with_nested:
+      - "{{groups['proxy-' ~ deploy_environment]}}"
+      - "{{range(dc_scale)}}"
+    when: serial_override is undefined or serial_override == 1
+
+  # - name: ensure /var/docker exists
+  #   file:
+  #     path: /var/docker
+  #     state: directory
+
+  # - name: copy docker config
+  #   template:
+  #     src: "{{templates_dir + '/docker/deploy/docker-compose.yml'}}"
+  #     dest: /var/docker/docker-compose.yml
+  #     owner: root
+  #     group: root
+  #     mode: '0644'
+
+  # - name: copy redis config
+  #   template:
+  #     src: "{{templates_dir + '/docker/deploy/redis.conf'}}"
+  #     dest: /var/docker/redis.conf
+  #     owner: root
+  #     group: root
+  #     mode: '0644'
+  #   when: redis_host == inventory_hostname
+
+  # - name: copy secrets
+  #   template:
+  #     src: "{{templates_dir + '/docker/deploy/' ~ deploy_environment ~ '.env'}}"
+  #     dest: /var/docker/.env
+  #     owner: root
+  #     group: root
+  #     mode: '0644'
+
+  # - name: copy signing certificate
+  #   copy:
+  #     src: "{{artifacts_dir + '/certs/' ~ 'sello.pfx'}}"
+  #     dest: /var/docker/sello.pfx
+  #     owner: root
+  #     group: root
+  #     mode: '0644'
+
+  # - name: copy Alberto.p12
+  #   copy:
+  #     src: "{{templates_dir + '/docker/deploy/' ~ 'ATIB_Alberto.p12'}}"
+  #     dest: /var/docker/ATIB_Alberto.p12
+  #     owner: root
+  #     group: root
+  #     mode: '0644'
+
+  # - name: docker login
+  #   command: "docker login registry.yuki.es --username {{gitlab_registry_user}} --password {{gitlab_registry_pwd}}"
+
+  # - name: docker-compose pull
+  #   command:
+  #     chdir: /var/docker
+  #     cmd: docker-compose pull
+
+  # - name: docker-compose stop
+  #   command:
+  #     chdir: /var/docker
+  #     cmd: docker-compose stop api
+
+  # - name: docker-compose up
+  #   command:
+  #     chdir: /var/docker
+  #     cmd: docker-compose up -d --scale api={{dc_scale}}
+
+  # - name: Fail task if docker-compose ps api != healthy
+  #   shell: docker-compose ps api
+  #   args:
+  #     chdir: /var/docker
+  #     executable: /bin/bash
+  #   retries: 15
+  #   delay: 3
+  #   register: dc_status
+  #   until: "'healthy' in dc_status.stdout"
+
+  # - name: Fail task if docker-compose ps signer != healthy
+  #   shell: docker-compose ps signer
+  #   args:
+  #     chdir: /var/docker
+  #     executable: /bin/bash
+  #   retries: 15
+  #   delay: 3
+  #   register: dc_status
+  #   until: "'healthy' in dc_status.stdout"
+
+
+- name: Haproxy ready mode
+  haproxy:
+    state: enabled
+    host: "{{inventory_hostname}}-{{item.1}}"
+    socket: /run/haproxy/admin.sock
+    backend: api
+    fail_on_not_found: yes
+    wait: yes
+    drain: yes
+    wait_interval: 20
+    wait_retries: 20
+  delegate_to: "{{item.0}}"
+  with_nested:
+    - "{{groups['proxy-' ~ deploy_environment]}}"
+    - "{{range(dc_scale)}}"
+  when: serial_override is undefined or serial_override == 1

@@ -1,0 +1,6 @@
+- name: Test Win Shell
+
+  hosts: all
+  tasks:
+    - name: Write something
+      win_shell: New-Item c:/funca.txt

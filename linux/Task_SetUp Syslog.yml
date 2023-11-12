@@ -1,0 +1,41 @@
+# Configura el syslog de una máquina
+- name: Set up Syslog
+  become_method: sudo
+  become: yes #Aunque el linter lo corrija es con yes
+  hosts: all
+  tasks:
+    - name: Check if rsyslog is installed if not installs
+      apt:
+        name: rsyslog
+        update_cache: yes
+      
+    - name: Set up rsyslog.conf
+      blockinfile:
+        path: /etc/rsyslog.conf
+        insertafter: '\#input\(type\=\"imudp\" port\=\"514\"\)'
+        block: |
+          *.* @@192.168.1.185:514
+
+    - name: Backup conf file /etc/rsyslog.d
+      shell: cp /etc/rsyslog.d/50-default.conf /etc/rsyslog.d/50-default.conf.bckp && echo "" > /etc/rsyslog.d/50-default.conf
+
+    - name: Set up rsyslog.d/*.conf
+      blockinfile:
+        path: /etc/rsyslog.d/50-default.conf
+        block: |
+          auth,authpriv.*                 /var/log/auth.log
+          *.*;auth,authpriv.none          -/var/log/syslog
+          cron.*                          /var/log/cron.log
+          daemon.*                        -/var/log/daemon.log
+          kern.*                          -/var/log/kern.log
+          mail.*                          -/var/log/mail.log
+          user.*                          -/var/log/user.log
+
+          mail.err                        /var/log/mail.err
+
+          *.emerg                         :omusrmsg:*
+
+    - name: Restart service rsyslog service
+      service:
+        name: rsyslog
+        state: restarted

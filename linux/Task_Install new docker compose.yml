@@ -1,0 +1,27 @@
+- name: Cambiar docker compose -> docker-compose v2
+  hosts: all
+
+  vars:
+    ip: 192.168.1.254
+    package_names:
+      - docker
+
+  tasks:
+    #! Esto no va a funcionar, reocmiendo que se haga directamente con el builtin.shell
+    - name: "Descargar script de mi maquina por http"
+      get_url:
+        url: http://{{ ip }}:8000/App_ChangeDocker-compose.sh
+        dest: /home/yuki/scripts/
+
+    - name: "Comprobamos si docker esta instalado"
+      command: dpkg-query -l "{{ item }}"
+      loop: "{{ package_names }}"
+      register: package_check
+
+    - name: "Damos permisos de ejecución al script"
+      ansible.builtin.command: /bin/chmod +x /home/yuki/scripts/App_ChangeDocker-compose.sh
+      when: package_check is succeeded
+    
+    - name: "Ejecutamos el script"
+      ansible.builtin.command: /bin/bash /home/yuki/scripts/App_ChangeDocker-compose.sh
+      when: package_check is succeeded

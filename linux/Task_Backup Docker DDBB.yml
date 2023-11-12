@@ -1,0 +1,40 @@
+- name: "Backup docker DDBB"
+  hosts: all
+  become: yes # Le decimos que eleve privilegios
+  become_user: root # como root
+  tasks:
+    #* Tirahnn
+    - name: "Execute Backup script"
+      shell: |
+        # Definimos el fichero de salida
+        OF=/mnt/pg_bckp/ssmi_dump_$(date +%Y-%m-%d_%H_%M_%S).sql
+        # Ejecutamos el dump enviando la salida al fichero de salida
+        /usr/bin/docker exec -t ssmi_db_1 pg_dump -Fp -U postgres postgres > $OF
+        # Aplicamos la compresión al fichero de salida
+        /usr/bin/gzip $OF
+        # Se borran todos los ficheros de la carpeta de más de 90 días desde la última modificación
+        /usr/bin/find /mnt/pg_bckp -maxdepth 1 -type f -mtime +90 -exec /usr/bin/rm {} \;
+        # Se escribe un log en la carpeta
+        if [[ -f $(echo "$OF.sh") ]]; then  echo "Backup: OK" | ts "[\%Y-\%m-\%d \%H:\%M:\%S]" >> /docker/ssmi/crontab.log 2>&1; fi;
+      when: inventory_hostname == "tirahnn.yuki.es"
+    
+    #* Aloxor
+    - name: "Execute Backup script"
+      shell: |
+        OF=/mnt/pg_bckp/controlpresencia_dump_$(date +%Y-%m-%d_%H_%M_%S).sql
+        /usr/bin/docker exec -t controlpresencia_db_1 pg_dump -Fp -U postgres postgres > $OF
+        /usr/bin/gzip $OF
+        /usr/bin/find /mnt/pg_bckp -maxdepth 1 -type f -mtime +90 -exec /usr/bin/rm {} \;
+        if [[ -f $(echo "$OF.sh") ]]; then  echo "Backup: OK" | ts "[\%Y-\%m-\%d \%H:\%M:\%S]" >> /docker/controlpresencia/crontab.log 2>&1; fi;
+      when: inventory_hostname == "aloxor.yuki.es"
+
+    #* Notification
+    - name: "Send notification"
+      ansible.builtin.uri:
+        url: https://chat.googleapis.com/v1/spaces/AAAAZRw3cms/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=kY21X8LB6hNSfBbOTAUrS65T70Cr-Jl2SVWOaPlPaX0%3D
+        method: POST
+        headers:
+          Content-Type: "application/json; charset=UTF-8"
+        body_format: json
+        body:
+          text: "*Executed on:* {{ ansible_hostname }}\n*Playbook executed:* {{ ansible_play_name }}\n"

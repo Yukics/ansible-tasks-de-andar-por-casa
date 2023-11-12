@@ -1,0 +1,42 @@
+- name: Backup FW FortiOS conf
+  hosts: localhost
+  connection: local
+  vars:
+    ip: 192.168.1.1
+    ftp_ip: 192.168.1.2
+  tasks:
+    - name: "Call bahul"
+      ansible.builtin.uri:
+        url: https://bahul.yuki.es/api/FWbackups
+        method: GET
+        headers:
+          x-token: "{{ token }}"
+      register: "ftpuser"
+      
+    - name: "Execute command"
+      shell: sshpass -p '{{ ftpuser.json.body.pass }}' ssh {{ ftpuser.json.body.user }}@{{ ip }} execute backup full-config ftp FW01-{{ ansible_date_time.date }}.cfg {{ ftp_ip }} {{ ftpuser.json.body.ftpuser }} {{ ftpuser.json.body.ftppass }}
+      register: "result"
+    - debug: var=result.stdout_lines
+
+    - name: "Download backup"
+      get_url:
+        url: ftp://{{ ftpuser.json.body.ftpuser }}:{{ ftpuser.json.body.ftppass }}@{{ ftp_ip }}/FW01-{{ ansible_date_time.date }}.cfg
+        dest: /root/scripts
+        mode: 0777
+
+    - name: "Execute autodoc based on script to push it on .md Confluence"
+      shell: cd /root/scripts && /usr/bin/python3.10 /root/scripts/autodoc.py && rm /root/scripts/FW01-{{ ansible_date_time.date }}.cfg && rm -r /root/scripts/generated
+      register: "autodoc"
+    - debug: var=autodoc.stdout_lines
+
+    - name: "Send notification"
+      ansible.builtin.uri:
+        url: https://chat.googleapis.com/v1/spaces/AAAAZRw3cms/messages?key=...
+        method: POST
+        headers:
+          Content-Type: "application/json; charset=UTF-8"
+        body_format: json
+        body:
+          text: "*Executed on:* {{ ansible_hostname }}\n*Playbook executed:* {{ ansible_play_name }}\n*Stdout:*\n {{ result.stdout_lines| join('\n') }} \n {{ autodoc.stdout_lines| join('\n') }}"
+
+        

@@ -1,0 +1,76 @@
+- name: "Set up zabbix agents certs"
+  hosts: all
+  tasks:
+    - name: "Get path of zabbix-agent service"
+      ansible.windows.win_shell: |
+          $service = Get-WmiObject win32_service | ?{$_.Name -like '*zabbix*'} | select PathName | Format-Table -HideTableHeader 
+          $service = $(echo $service | out-string).split(" ")[0]
+          $service = $service -replace "\\[^\\]*(?:\\)?$"
+          write-output "$service\certs"
+      register: path
+    - debug: 
+        msg: "{{ 'Zabbix Location: ' + path.stdout_lines[1] }}"
+
+    - name: "Create folder for certs"
+      ansible.windows.win_file:
+        path: "{{ path.stdout_lines[1] }}"
+        state: directory
+
+    - name: "Call bahul"
+      ansible.windows.win_uri:
+        url: https://bahul.yuki.es/api/ZabbixCerts
+        method: GET
+        headers:
+          x-token: "{{ token }}"
+        return_content: yes
+      register: "certs"  
+
+    - name: "Create crt"
+      ansible.windows.win_copy:
+        content: "{{ certs.json.body.crt }}"
+        dest: "{{ path.stdout_lines[1] + '\\sistemas.crt' }}"
+
+    - name: "Create key"
+      ansible.windows.win_copy:
+        content: "{{ certs.json.body.key }}"
+        dest: "{{ path.stdout_lines[1] + '\\sistemas.key' }}"
+
+    - name: "Set up tlsconnect with cert"
+      community.windows.win_lineinfile:
+        dest: "{{ path.stdout_lines[1] + '\\..\\zabbix_agent2.win.conf' }}"
+        regexp: ^TLSConnect=.*
+        insertafter: ^# TLSConnect=
+        line: TLSConnect=cert
+
+    - name: "Set up tlsaccept with cert"
+      community.windows.win_lineinfile:
+        dest: "{{ path.stdout_lines[1] + '\\..\\zabbix_agent2.win.conf' }}"
+        regexp: ^TLSAccept=.*
+        insertafter: ^# TLSAccept=
+        line: TLSAccept=cert
+
+    - name: "Set up tlsca"
+      community.windows.win_lineinfile:
+        dest: "{{ path.stdout_lines[1] + '\\..\\zabbix_agent2.win.conf' }}"
+        regexp: ^TLSCAFile=.*
+        insertafter: ^# TLSCAFile=
+        line: TLSCAFile={{ path.stdout_lines[1] + '\sistemas.crt' }}
+
+    - name: "Set up tlscert"
+      community.windows.win_lineinfile:
+        dest: "{{ path.stdout_lines[1] + '\\..\\zabbix_agent2.win.conf' }}"
+        regexp: ^TLSCertFile=.*
+        insertafter: ^# TLSCertFile=
+        line: TLSCertFile={{ path.stdout_lines[1] + '\sistemas.crt' }}
+
+    - name: "Set up tlskey"
+      community.windows.win_lineinfile:
+        dest: "{{ path.stdout_lines[1] + '\\..\\zabbix_agent2.win.conf' }}"
+        regexp: ^TLSKeyFile=.*
+        insertafter: ^# TLSKeyFile=
+        line: TLSKeyFile={{ path.stdout_lines[1] + '\sistemas.key' }}
+
+    - name: "Restart service zabbix-agent service"
+      win_service:
+        name: "Zabbix Agent 2"
+        state: restarted

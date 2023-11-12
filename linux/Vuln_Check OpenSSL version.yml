@@ -1,0 +1,10 @@
+---
+- name: "Check openssl version"
+  become: yes
+  hosts: all
+  tasks:
+    - name: "Apt list execution"
+      ansible.builtin.command: /usr/bin/dpkg --list openssl
+      register: output
+
+    - debug: msg="{{ ansible_hostname }} {{ output.stdout_lines[-1] }}"

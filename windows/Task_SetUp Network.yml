@@ -1,0 +1,34 @@
+- name: Cambiar IP adaptador
+  hosts: all
+  tasks:
+  
+    - name: Crea carpeta
+      ansible.windows.win_file:
+        path: C:\$Sistemas
+        state: directory
+
+    - name: Crea Script
+      ansible.windows.win_file:
+        path: C:\$Sistemas\changeIP.ps1
+        state: touch
+
+    - name: Agrega contenido 
+      ansible.windows.win_copy:
+        dest: C:\$Sistemas\changeIP.ps1
+        content: |
+          $nRed = '189'
+          $currentInterface = $(Get-NetIPAddress -InterfaceIndex $(Get-NetConnectionProfile).InterfaceIndex)
+          Remove-NetIPAddress -IPAddress $currentInterface.IPAddress -Confirm:$false
+          Remove-NetRoute -InterfaceIndex $currentInterface.InterfaceIndex -NextHop $(Get-NetIPConfiguration | Foreach IPv4DefaultGateway).NextHop -Confirm:$false
+          New-NetIPAddress -InterfaceIndex $currentInterface.InterfaceIndex -AddressFamily IPv4 -IPAddress ($currentInterface.IPAddress -replace $currentInterface.IPAddress.Split(".")[2],$nRed) -PrefixLength 24 -DefaultGateway $($currentInterface.IPAddress -replace $currentInterface.IPAddress.Split(".")[3],'1' -replace $currentInterface.IPAddress.Split(".")[2],$nRed) -Confirm:$false
+          Set-NetRoute -InterfaceIndex $currentInterface.InterfaceIndex -DestinationPrefix '0.0.0.0/0' -AddressFamily IPv4 -NextHop ($currentInterface.IPAddress -replace $currentInterface.IPAddress.Split(".")[3],'1' -replace $currentInterface.IPAddress.Split(".")[2],$nRed) -RouteMetric 0 -Confirm:$false
+          Set-DnsClientServerAddress -InterfaceIndex $currentInterface.InterfaceIndex -ServerAddresses ("192.168.1.6") -Confirm:$false
+          Disable-NetAdapterBinding -InterfaceAlias $currentInterface.InterfaceAlias -ComponentID ms_tcpip6 -Confirm:$false
+
+    - name: Ejecuta el script para cambiar IP a otro rango
+      ansible.windows.win_powershell: 
+        script: |
+          Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+          C:\$Sistemas\changeIP.ps1
+          
+    

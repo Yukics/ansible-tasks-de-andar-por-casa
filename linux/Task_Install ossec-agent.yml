@@ -1,0 +1,125 @@
+- name: "Define host to be executed on"
+  hosts: all
+  gather_facts: no
+  connection: local
+  become: yes
+  become_user: root
+  tasks:
+    - name: "Add host to host list"
+      add_host:
+        name: "{{ host }}"
+        groups:
+          - override
+      when: host is defined
+
+    - name: "Add host from debug to override"
+      with_items: groups['debug']
+      add_host:
+        name: "{{ item }}"
+        groups:
+          - override
+      when: host is not defined
+
+    - name: "Cambia el tipo de conexión"
+      set_fact:
+        ansible_connection: ssh
+
+- name: "Install ossec-agent"
+  hosts: override
+  become: yes
+  become_user: root
+  tasks:
+    - name: "Download set up script"
+      # warn: false
+      shell: |
+        wget https://updates.atomicorp.com/installers/atomic -O /tmp/ossec-install-repo.sh
+        chmod +x /tmp/ossec-install-repo.sh
+
+    - name: "Set up repository"
+      ignore_errors: true
+      ansible.builtin.expect:
+        command: bash -c /tmp/ossec-install-repo.sh
+        responses:
+          'Do you agree to these terms\? \(yes/no\) \[Default\: yes\] ': "yes"
+
+    - name: "Install OSSEC Agent"
+      apt:
+        name:
+          - ossec-hids-agent
+        update_cache: yes
+
+    - name: "Add specific file"
+      copy:
+        content: ""
+        dest: /var/ossec/queue/rids/sender
+        force: no
+        group: root
+        owner: root
+        mode: 0644
+
+    - name: "Set up the ossec-agent.conf"
+      copy:
+        content: |
+          <ossec_config>
+            <active-response>
+              <disabled>no</disabled>
+            </active-response>
+            <client>
+              <server-ip>192.168.1.192</server-ip>
+              <server-hostname>alienvault.yuki.es</server-hostname>
+            </client>
+            <syscheck>
+              <!-- Frequency that syscheck is executed -- default every 2 hours -->
+              <frequency>7200</frequency>
+
+              <!-- Directories to check  (perform all possible verifications) -->
+              <directories check_all="yes">/etc,/usr/bin,/usr/sbin</directories>
+              <directories check_all="yes">/bin,/sbin</directories>
+
+              <!-- Files/directories to ignore -->
+              <ignore>/etc/mtab</ignore>
+              <ignore>/etc/hosts.deny</ignore>
+              <ignore>/etc/mail/statistics</ignore>
+              <ignore>/etc/random-seed</ignore>
+              <ignore>/etc/adjtime</ignore>
+              <ignore>/etc/httpd/logs</ignore>
+            </syscheck>
+            <rootcheck>
+              <rootkit_files>/var/ossec/etc/shared/rootkit_files.txt</rootkit_files>
+              <rootkit_trojans>/var/ossec/etc/shared/rootkit_trojans.txt</rootkit_trojans>
+            </rootcheck>
+            <localfile>
+              <log_format>syslog</log_format>
+              <location>/var/log/messages</location>
+            </localfile>
+            <localfile>
+              <log_format>syslog</log_format>
+              <location>/var/log/audit/audit.log</location>
+            </localfile>
+            <localfile>
+              <log_format>syslog</log_format>
+              <location>/var/log/secure</location>
+            </localfile>
+            <localfile>
+              <log_format>syslog</log_format>
+              <location>/var/log/maillog</location>
+            </localfile>
+          </ossec_config>
+        dest: /var/ossec/etc/ossec.conf
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: "Manage Tools OSSEC Agent"
+      ignore_errors: true
+      ansible.builtin.expect:
+        command: /var/ossec/bin/manage_agents -i {{ ossec_server_key }}
+        responses:
+          'Confirm adding it\?\(y/n\)\:': "y"
+          '** Press ENTER to return to the main menu.': ""
+
+    - name: restart ossec-agent
+      service:
+        name: "ossec"
+        state: restarted
+        enabled: yes

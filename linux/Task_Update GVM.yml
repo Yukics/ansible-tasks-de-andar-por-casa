@@ -1,0 +1,29 @@
+- name: "Update GVM assets"
+  hosts: localhost
+  connection: local
+  become: yes
+  become_user: root
+  tasks:
+    - name: "Get id"
+      become: yes
+      shell: id
+      register: o
+    - debug: var=o.stdout_lines
+    - name: Update default
+      shell: sudo -u gvm greenbone-nvt-sync
+    - name: Update GVMD_DATA
+      shell: sudo -u gvm greenbone-feed-sync --type GVMD_DATA
+    - name: Update SCAP  
+      shell: sudo -u gvm greenbone-feed-sync --type SCAP
+    - name: Update CERT
+      shell: sudo -u gvm greenbone-feed-sync --type CERT
+
+    - name: "Send notification"
+      ansible.builtin.uri:
+        url: https://chat.googleapis.com/v1/spaces/AAAAlCHjbao/messages?key=...
+        method: POST
+        headers:
+          Content-Type: "application/json; charset=UTF-8"
+        body_format: json
+        body:
+          text: "*Executed on:* {{ ansible_hostname }}\n*Playbook executed:* {{ ansible_play_name }}\n"

@@ -1,0 +1,64 @@
+# Configura el certificado para la conexión con el agente de zabbix
+- name: "Set up zabbix agents certs"
+  become: yes
+  become_user: root
+  hosts: all
+  tasks:
+    - name: "Create folder for certs"
+      file:
+        path: /etc/zabbix/certs
+        state: directory
+
+    - name: "Call bahul"
+      ansible.builtin.uri:
+        url: https://bahul.yuki.es/api/ZabbixCerts
+        method: GET
+        headers:
+          x-token: "{{ token }}"
+      register: "certs"   
+
+    - name: "Create crt"
+      shell: echo "{{ certs.json.body.crt }}" >> /etc/zabbix/certs/sistemas.crt
+
+    - name: "Create key"
+      shell: echo "{{ certs.json.body.key }}" >> /etc/zabbix/certs/sistemas.key
+
+    - name: "Set up tlsconnect with cert"
+      lineinfile:
+        dest: /etc/zabbix/zabbix_agent2.conf
+        regexp: ^TLSConnect=.*
+        insertafter: ^# TLSConnect=
+        line: TLSConnect=cert
+
+    - name: "Set up tlsaccept with cert"
+      lineinfile:
+        dest: /etc/zabbix/zabbix_agent2.conf
+        regexp: ^TLSAccept=.*
+        insertafter: ^# TLSAccept=
+        line: TLSAccept=cert
+
+    - name: "Set up tlsca"
+      lineinfile:
+        dest: /etc/zabbix/zabbix_agent2.conf
+        regexp: ^TLSCAFile=.*
+        insertafter: ^# TLSCAFile=
+        line: TLSCAFile=/etc/zabbix/certs/sistemas.crt
+
+    - name: "Set up tlscert"
+      lineinfile:
+        dest: /etc/zabbix/zabbix_agent2.conf
+        regexp: ^TLSCertFile=.*
+        insertafter: ^# TLSCertFile=
+        line: TLSCertFile=/etc/zabbix/certs/sistemas.crt
+
+    - name: "Set up tlskey"
+      lineinfile:
+        dest: /etc/zabbix/zabbix_agent2.conf
+        regexp: ^TLSKeyFile=.*
+        insertafter: ^# TLSKeyFile=
+        line: TLSKeyFile=/etc/zabbix/certs/sistemas.key    
+
+    - name: "Restart service zabbix-agent service"
+      service:
+        name: zabbix-agent2
+        state: restarted

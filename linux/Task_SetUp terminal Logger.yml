@@ -1,0 +1,32 @@
+# Hace que todos los comandos ejecutados por cualquier usuario se logeen en el syslog de Kadavo
+- name: "Set up shell logger"
+  become: yes
+  become_user: root
+  hosts: all
+  tasks:
+    - name: "Append to file /etc/bash.bashrc"
+      shell: |
+        echo "export PROMPT_COMMAND='RETRN_VAL=$?;logger -p local6.debug \"\$(whoami) \$(echo \$SSH_CLIENT) [\$\$]: \$(history 1 | sed \"s/^[ ]*[0-9]\+[ ]*//\" ) [$RETRN_VAL]\"'" >> /etc/bash.bashrc
+
+    - name: "Conf command syslog"
+      shell: |
+        echo "local6.*    /var/log/commands.log" >> /etc/rsyslog.d/bash.conf
+
+    - name: "Install logrotate maybe its not installed"
+      ansible.builtin.apt:
+        name: logrotate
+        state: latest
+        update_cache: yes
+
+    - name: "Set up log rotation"
+      shell: |
+        printf "/var/log/commands.log\n$(cat /etc/logrotate.d/rsyslog)" >  /etc/logrotate.d/rsyslog
+
+    - name: "Restart logrotate"
+      service:
+        name: logrotate
+        state: restarted
+
+    - name: "Set up cron logrotate"
+      shell: |
+        crontab -l | { cat; echo "0 0 * * * /usr/sbin/logrotate -f /etc/logrotate.conf"; } | crontab -

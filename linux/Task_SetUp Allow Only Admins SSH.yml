@@ -1,0 +1,27 @@
+# Configuración inicial del servicio SSH
+- name: Obligar login con cuenta de AD
+  hosts: all
+  tasks:
+    - name: Definimos puerto 22
+      lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: '^#Port*'
+        line: Port 22
+
+    - name: Definimos password authetication en yes
+      lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: '^#PasswordAuthentication yes$'
+        line: PasswordAuthentication yes
+
+    - name: Agregamos la linea AllowGroups debajo de PasswordAuthentication yes #? Se podría hacer un Deny all y luego permitir el LinuxAdmins
+      lineinfile:
+        dest: /etc/ssh/sshd_config
+        insertafter: '^PasswordAuthentication yes$'
+        line: AllowGroups linuxadmins@yuki.es
+
+    - name: Reiniciar el servicio sshd
+      service:
+        name: ssh
+        state: restarted
+        enabled: yes

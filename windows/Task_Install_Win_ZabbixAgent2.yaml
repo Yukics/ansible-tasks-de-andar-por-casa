@@ -1,0 +1,36 @@
+- name: Instalar agente de zabbix2
+  hosts: all
+
+  tasks:    
+    - name: Stop zabbix-agent
+      ansible.windows.win_shell: C:\apps\zabbix-agent2\bin\zabbix_agentd.exe --stop
+
+    - name: Uninstall zabbix-agent
+      ansible.windows.win_shell: C:\apps\zabbix-agent2\bin\zabbix_agentd.exe --uninstall
+
+    - name: Remove zabbix-agent
+      ansible.windows.win_shell: rm -r C:\apps\zabbix-agent2
+
+    #Creamos un server http con python mismamente donde tengamos el zip "python -m http.server"
+    - name: Download zabbix agent
+      ansible.windows.win_get_url:
+        url: http://192.168.1.57:8000/zabbix-agent2.zip
+        dest: C:\apps\zabbix-agent2.zip
+
+    - name: Unzip file
+      community.windows.win_unzip:
+        src: C:\apps\zabbix-agent2.zip
+        dest: C:\apps\
+
+    - name: Definimos el Hostname en la configuración
+      community.windows.win_lineinfile:
+        dest: C:\apps\zabbix-agent2\bin\zabbix_agent2.win.conf
+        regexp: ^Hostname=.*
+        insertafter: ^# Hostname=
+        line: Hostname={{ ansible_hostname }}   
+
+    - name: Instalar servicio
+      ansible.windows.win_shell: C:\apps\zabbix-agent2\bin\zabbix_agent2.exe --install
+      
+    - name: Iniciar servicio
+      ansible.windows.win_shell: C:\apps\zabbix-agent2\bin\zabbix_agent2.exe --start

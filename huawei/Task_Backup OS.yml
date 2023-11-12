@@ -1,0 +1,18 @@
+- name: Backup SW Huawei Oficina conf
+  hosts: localhost
+  connection: local
+  vars:
+    ip: 192.168.1.1
+    ftp_ip: 192.168.1.2
+  tasks:
+    - name: "Call bahul"
+      ansible.builtin.uri:
+        url: https://bahul.yuki.es/api/SWHuaweibackups
+        method: GET
+        headers:
+          x-token: "{{ token }}"
+      register: "ftpuser"
+    - name: "Execute command"
+      shell: sshpass -p '{{ ftpuser.json.body.pass }}' ssh {{ ftpuser.json.body.user }}@{{ ip }} set save-configuration backup-to-server server {{ ftp_ip }} transport-type ftp user {{ ftpuser.json.body.ftpuser }} password {{ ftpuser.json.body.ftppass }}
+      register: "result"
+    - debug: var=result.stdout_lines

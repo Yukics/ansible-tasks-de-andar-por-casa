@@ -1,0 +1,19 @@
+---
+- name: Set up dashboard
+  hosts: kubernetes_master_nodes
+  become: yes
+  become_method: su
+  become_user: root
+  
+  vars:
+    version: "2.7.0"
+
+  tasks:
+
+  - name: Populate service facts
+    service_facts:
+
+  - name: Deploy dashboard
+    shell: "kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v{{ version | default('2.7.0') }}/aio/deploy/recommended.yaml"
+    run_once: true
+    # when: "'k3s' in services"

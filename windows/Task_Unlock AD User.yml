@@ -1,0 +1,19 @@
+- name: "Desbloquear Usuario"
+  hosts: all
+  tasks:
+  
+  - name: "Desbloqueando usuario"
+    ansible.windows.win_shell: Get-ADUser -Identity {{ user }} | Unlock-ADAccount
+    register: "result"
+
+  - name: "Send notification"
+    ansible.windows.win_shell: |
+      $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+      $headers.Add("Content-Type", "application/json; charset=utf-8")
+
+      $body = '{
+        "text": "*Executed on:* {{ ansible_hostname }}\n*Playbook executed:* {{ ansible_play_name }}\n*Stdout:* Ha sido desbloqueado {{ user }}"
+      }'
+
+      Invoke-RestMethod 'https://chat.googleapis.com/v1/spaces/AAAAlCHjbao/messages?key=...' -Method 'POST' -Headers $headers -Body $body
+

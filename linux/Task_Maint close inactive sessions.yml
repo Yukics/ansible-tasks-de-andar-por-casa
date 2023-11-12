@@ -1,0 +1,22 @@
+- name: "Close inactive SSH sessions"
+  hosts: all
+  become: yes
+  become_user: root
+  tasks:
+    - name: "Get id"
+      become: yes
+      shell: id
+      register: o
+    # Cierra la sesión de todos los usuarios conectados a excepción de la propia sesión de ansible
+    - name: "Execute script"
+      shell: /usr/bin/w|/usr/bin/grep -v ansible|/usr/bin/awk "{print \$2,\$5}"|/usr/bin/grep pts|/usr/bin/cut -d" " -f1 |/usr/bin/xargs -I {} /usr/bin/fuser -k /dev/{} > /dev/null 2>&1
+
+    - name: "Send notification"
+      ansible.builtin.uri:
+        url: https://chat.googleapis.com/v1/spaces/AAAAlCHjbao/messages?key=...
+        method: POST
+        headers:
+          Content-Type: "application/json; charset=UTF-8"
+        body_format: json
+        body:
+          text: "*Executed on:* {{ ansible_hostname }}\n*Playbook executed:* {{ ansible_play_name }}\n"

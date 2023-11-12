@@ -1,0 +1,51 @@
+---
+- name: Remove local admins from PC
+  hosts: all
+  gather_facts: true
+  collections:
+    - ansible.windows
+  vars:
+    user: adminyuki
+
+  tasks:
+    - name: "Comprueba los usuarios con permiso de administrador y define una cuenta de administracion"
+      ansible.windows.win_powershell:
+        script: |
+          #! Importante que el password se llame pass en el json
+          $request = $(Invoke-WebRequest -UseBasicParsing https://bahul.yuki.es/api/WIntriSis -Headers @{'x-token' = '{{ token }}'}).content | Select-String -Pattern '^.*pass":"(.*)".*$' | % {"$($_.matches.groups[1])"}
+          $pass = ConvertTo-SecureString -String $request -AsPlainText -Force
+
+          if (Get-LocalUser {{ user }}  2> $null){
+              Write-Output "{{ user }} ya existe"
+              Get-LocalUser -Name "{{ user }}" | Set-LocalUser -Password $pass
+          }
+          else {
+              New-LocalUser "{{ user }}" -Password $pass -FullName "{{ user }}" -Description "Cuenta de administación de los sistemas"
+              Add-LocalGroupMember -Group "Administradores" -Member "{{ user }}" 
+          }
+
+          $localAdmins = Get-LocalGroupMember Administradores | Select-Object Name -ExpandProperty Name
+
+          $verifiedAdmins = @("$env:computername\Administrador", "$env:computername\{{ user }}", "INTRICOM\Admins. del dominio")
+
+          Disable-LocalUser Administrador
+          
+          for ($i=0; $i -lt $localAdmins.length; $i++) {
+
+            if ($verifiedAdmins -contains $localAdmins[$i]) 
+              {
+                  Write-Output "Comprobado" $localAdmins[$i] 
+              } else {
+                  Remove-LocalGroupMember -Group Administradores -Member $localAdmins[$i] 
+                  Disable-LocalUser $localAdmins[$i]
+                  Write-Output "Eliminado del grupo de administradores" $localAdmins[$i]
+              }
+          }
+
+          #? Add usuarios del dominio to hyper-v admins
+          $machineUserDict = @{
+            COMPUTER01 = 'DOMAIN\genericUser'
+            ... 
+          }
+          try{ Add-LocalGroupMember -Group "Administradores de Hyper-V" -Member $machineUserDict[$env:computername] }
+          catch { Write-output "An error occurred, not in the array" }

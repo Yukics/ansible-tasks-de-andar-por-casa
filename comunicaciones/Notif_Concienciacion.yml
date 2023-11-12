@@ -1,0 +1,44 @@
+# Reference: https://docs.ansible.com/ansible/latest/collections/community/general/mail_module.html
+- name: "Send staff policies periodically"
+  hosts: all
+  tasks:
+
+    #* Mail credentials retrieving
+    - name: "Call bahul"
+      ansible.builtin.uri:
+        url: https://bahul.yuki.es/api/MailUser
+        method: GET
+        headers:
+          x-token: "{{ token }}"
+      register: "mailuser"
+      delegate_to: localhost
+
+    #* Send email thorugh gmail
+    - name: Sending an e-mail using Gmail SMTP servers
+      community.general.mail:
+        host: smtp.gmail.com
+        port: 587
+        username: "{{ mailuser.json.body.user }}"
+        password: "{{ mailuser.json.body.pass }}"
+        to: "{{ destinatario }}"
+        subject: Concienciación en Seguridad
+        subtype: html
+        body: '<p>Buenos días equipo,</p> <p>debido a la implementación de los sistemas de gestión de la información y requisitos propios del ENS es muy necesario realizar tareas de concienciación y formación con respecto a la seguridad de la información. Se adjuntan al correo un PDF con información y un pequeño cuestionario para tener feedback de la campaña de concienciación.</p><p>Enlace al cuestionario: {{ cuestionario }}</p><p>Un saludo</p>'
+        attach:
+        - {{ ruta }}
+        # - /tmp/incibe/27001-NS-SGSINormasdeUso.pdf
+      delegate_to: localhost
+
+
+    #* Notification
+    # - name: "Send notification"
+    #   ansible.builtin.uri:
+    #     url: https://chat.googleapis.com/v1/spaces/AAAAlCHjbao/messages?key=...
+    #     method: POST
+    #     headers:
+    #       Content-Type: "application/json; charset=UTF-8"
+    #     body_format: json
+    #     body:
+    #       text: "*Executed on:* {{ ansible_hostname }}\n*Playbook executed:* {{ ansible_play_name }}\n"
+    #   delegate_to: localhost
+

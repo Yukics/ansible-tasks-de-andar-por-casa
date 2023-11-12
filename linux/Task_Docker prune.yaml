@@ -1,0 +1,36 @@
+- name: "Ejecutar docker system prune -f"
+  become: yes
+  become_user: root
+  hosts: all
+  vars:
+    package_names:
+      - docker
+  tasks:  
+    - name: "Comprobamos si docker esta instalado"
+      command: dpkg-query -l "{{ item }}"
+      loop: "{{ package_names }}"
+      register: package_check
+
+    - name: "Comprobación del día de la semana, devuelve true en Domingo"
+      ansible.builtin.shell: if [[ $(date +%u) -eq 7 ]]; then echo "true"; else echo "false"; fi # Comprobamos si es domingo o no
+      register: output2
+
+    - name: "Ejecución del comando cuando no es Domingo"
+      ansible.builtin.command: /usr/bin/docker system prune -f # Cuando NO es domingo se ejecuta el prune normal
+      when: package_check is succeeded and output2 == "false"
+      register: output
+      
+    - name: "Ejecución del comando en domingo"
+      ansible.builtin.command: /usr/bin/docker system prune -fa # Cuando es domingo se ejecuta con el ALL
+      when: package_check is succeeded and output2 == "true"
+      register: output 
+
+    - name: "Send notification"
+      ansible.builtin.uri:
+        url: https://chat.googleapis.com/v1/spaces/AAAAlCHjbao/messages?key=...
+        method: POST
+        headers:
+          Content-Type: "application/json; charset=UTF-8"
+        body_format: json
+        body:
+          text: "*Executed on:* {{ ansible_hostname }}\n*Playbook executed:* {{ ansible_play_name }}\n"

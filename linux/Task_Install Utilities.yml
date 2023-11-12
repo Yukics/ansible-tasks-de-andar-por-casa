@@ -1,0 +1,16 @@
+#? PB para instalar herramientas básicas de administración
+- name: Install linux utilities
+  hosts: all
+  tasks:
+  - name: Install tools and alias
+    ansible.builtin.shell: |
+      /usr/bin/apt-get update -y --fix-missing
+      /usr/bin/apt-get upgrade -y
+      /usr/bin/apt-get install python3-pip mlocate ncdu at -y
+      /usr/bin/pip3 install bpytop
+      /bin/echo "alias top='bpytop'" >>  /etc/bash.bashrc
+      /bin/echo "alias dc='docker compose'" >> /etc/bash.bashrc
+    args:
+      executable: /bin/bash
+
+ 

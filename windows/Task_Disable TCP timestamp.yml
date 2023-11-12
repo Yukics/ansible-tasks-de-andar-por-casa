@@ -1,0 +1,9 @@
+- name: "Disable TCP timestamp"
+  hosts: all
+  tasks:
+    - name: Instalar servicio
+      ansible.windows.win_shell: netsh int tcp set global timestamps=disabled
+      register: "result"
+    - debug: var=result.stdout
+
+

@@ -1,0 +1,47 @@
+- name: "Remove snapshots"
+  hosts: localhost
+  connection: local
+  vars:
+    folder: Yuki
+    datacenter: yukiInc
+  tasks:
+    - name: "Call bahul"
+      ansible.builtin.uri:
+        url: https://bahul.yuki.es/api/VCenterAdmin
+        method: GET
+        headers:
+          x-token: "{{ token }}"
+      register: "vcenter"
+
+    - name: "Gather all registered virtual machines"
+      vmware_vm_info:
+        hostname: '{{ vcenter.json.body.hostname }}'
+        username: '{{ vcenter.json.body.user }}'
+        password: '{{ vcenter.json.body.pass }}'
+      delegate_to: localhost
+      register: vminfo
+    - debug: 
+        var: vminfo.virtual_machines
+        
+    # https://docs.ansible.com/ansible/latest/collections/community/vmware/vmware_guest_snapshot_module.html#ansible-collections-community-vmware-vmware-guest-snapshot-module
+    - name: "Remove all snapshots of a VM"
+      community.vmware.vmware_guest_snapshot:
+        hostname: '{{ vcenter.json.body.hostname }}'
+        username: '{{ vcenter.json.body.user }}'
+        password: '{{ vcenter.json.body.pass }}'
+        datacenter: "{{ datacenter }}"
+        folder: "/{{ folder }}/vm/"
+        name: "{{ item }}"
+        state: remove_all
+      delegate_to: localhost
+      loop: "{{ vminfo.virtual_machines }}"
+
+    # - name: "Send notification"
+    #   ansible.builtin.uri:
+    #     url: https://chat.googleapis.com/v1/spaces/AAAAlCHjbao/messages?key=...
+    #     method: POST
+    #     headers:
+    #       Content-Type: "application/json; charset=UTF-8"
+    #     body_format: json
+    #     body:
+    #       text: "*Executed on:* {{ ansible_hostname }}\n*Playbook executed:* {{ ansible_play_name }}"

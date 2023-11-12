@@ -1,0 +1,9 @@
+- name: "Disable TCP timestamp"
+  hosts: all
+  become: yes
+  become_user: root
+  tasks:
+    - name: "Add net.ipv4.tcp_timestamps=0"
+      shell: sudo echo "net.ipv4.tcp_timestamps=0" >> /etc/sysctl.conf && sudo sysctl -p
+      register: "result"
+    - debug: var=result.stdout_lines

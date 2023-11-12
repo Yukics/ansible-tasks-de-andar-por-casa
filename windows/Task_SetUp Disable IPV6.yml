@@ -1,0 +1,51 @@
+# - name: enable multiple interfaces of multiple interfaces
+#   community.windows.win_net_adapter_feature:
+#     interface:
+#     - 'Ethernet0'
+#     - 'Ethernet1'
+#     state: enabled
+#     component_id:
+#     - ms_tcpip6
+#     - ms_server
+
+#FUNCIONA (hay que acordarse de instalar el modulo desde ansible galaxy)
+- name: Disable ms_tcpip6 of all the Interface
+  hosts: all
+  tasks:
+    - name: Disable ipv6
+      community.windows.win_net_adapter_feature:
+        interface: '*'
+        state: disabled
+        component_id:
+        - ms_tcpip6
+
+# - name: Disable ms_tcpip6 of all the Interface
+#   # ansible_connection: winrm
+#   # #ansible_winrm_server_cert_validation: ignore
+#   # ansible_port: 5985
+#   # ansible_winrm_transport: kerberos
+#   # ansible_winrm_kerberos_delegation: true
+#   hosts: all
+#   tasks:
+#     # - set_fact:
+#     #   ansible_winrm_server_cert_validation: ignore
+
+#     - name: Disable ipv6
+#       win_shell: Disable-NetAdapterBinding -InterfaceAlias $(Get-NetIPAddress -AddressFamily IPv4 -InterfaceIndex $(Get-NetConnectionProfile | Select-Object -ExpandProperty InterfaceIndex)).InterfaceAlias -ComponentID ms_tcpip6
+
+
+# - name: Disable ms_tcpip6 of all the Interface
+#   hosts: all
+#   tasks:
+#     - name: Disable ipv6
+#       ansible.windows.win_powershell: 
+#         script: |
+#           ($a = Get-NetConnectionProfile | Select-Object -ExpandProperty InterfaceIndex) -and ($b = Get-NetIPAddress -AddressFamily IPv4 -InterfaceIndex $a) -and (Disable-NetAdapterBinding -InterfaceAlias $b.InterfaceAlias -ComponentID ms_tcpip6)
+
+# - name: Disable ms_tcpip6 of all the Interface
+#   hosts: all
+#   tasks:
+#     - name: Disable ipv6
+#       ansible.windows.win_psexec: 
+#         elevated: yes
+#         command: ($a = Get-NetConnectionProfile | Select-Object -ExpandProperty InterfaceIndex) -and ($b = Get-NetIPAddress -AddressFamily IPv4 -InterfaceIndex $a) -and (Disable-NetAdapterBinding -InterfaceAlias $b.InterfaceAlias -ComponentID ms_tcpip6)
