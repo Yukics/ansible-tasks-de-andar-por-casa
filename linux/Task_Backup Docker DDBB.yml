@@ -31,7 +31,7 @@
     #* Notification
     - name: "Send notification"
       ansible.builtin.uri:
-        url: https://chat.googleapis.com/v1/spaces/AAAAZRw3cms/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=kY21X8LB6hNSfBbOTAUrS65T70Cr-Jl2SVWOaPlPaX0%3D
+        url: https://chat.googleapis.com/v1/spaces/AAAAZRw3cms/messages?key=...
         method: POST
         headers:
           Content-Type: "application/json; charset=UTF-8"
