@@ -32,7 +32,8 @@
         wget https://dlcdn.apache.org/zookeeper/zookeeper-{{ version }}/apache-zookeeper-{{ version }}-bin.tar.gz
         tar -xvf apache-zookeeper-{{ version }}-bin.tar.gz
         rm apache-zookeeper-{{ version }}-bin.tar.gz
-        mv -f apache-zookeeper-{{ version }}-bin /opt/zookeper
+        mv -f apache-zookeeper-{{ version }}-bin zookeper
+        mv -f zookeeper /opt/
     
     - name: "Set up zookeper folder permissions"
       file:
