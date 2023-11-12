@@ -41,7 +41,9 @@
         mv -f kafka /opt/
     
     - name: "Modify file descriptors limits"
-      shell: echo "* hard nofile 100000 * soft nofile 100000" | sudo tee --append /etc/security/limits.conf
+      shell: |
+        echo "* hard nofile 100000" | sudo tee --append /etc/security/limits.conf
+        echo "* soft nofile 100000" | sudo tee --append /etc/security/limits.conf
 
     - name: "Set up kafka folder permissions"
       file:
