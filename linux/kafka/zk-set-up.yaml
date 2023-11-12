@@ -27,6 +27,7 @@
         shell: /usr/sbin/nologin
 
     - name: "Download zookeper and kafka"
+      ignore_errors: true
       shell: |
         wget https://dlcdn.apache.org/zookeeper/zookeeper-{{ version }}/apache-zookeeper-{{ version }}-bin.tar.gz
         tar -xvf apache-zookeeper-{{ version }}-bin.tar.gz
