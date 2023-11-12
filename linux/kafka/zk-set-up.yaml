@@ -1,0 +1,43 @@
+- name: "Set up Zookepers"
+  hosts: all
+  tasks:
+    - name: "Apt update and install packages"
+        apt:
+          update_cache: yes
+          pkg:
+          - ca-certificates
+          - zip
+          - net-tools
+          - vim
+          - nano
+          - tar
+          - netcat
+          - openjdk-8-jdk
+    
+    - name: "Disable swappiness"
+      shell: |
+        sysctl vm.swappiness=1
+        echo 'vm.swappiness=1' | sudo tee --append /etc/sysctl.conf
+    
+    - name: "Download zookeper and kafka"
+      shell: |
+        wget https://www.apache.org/dyn/closer.lua/zookeeper/zookeeper-3.8.3/apache-zookeeper-3.8.3-bin.tar.gz
+        tar -xvf apache-zookeeper-3.8.3-bin.tar.gz
+        rm apache-zookeeper-3.8.3-bin.tar.gz
+        mv apache-zookeeper-3.8.3-bin /opt/zookeper
+
+    - name: "Create zookeper user"
+      user:
+        name: zookeper
+        shell: /usr/sbin/nologin
+    
+    - name: "Create data zookeper folder"
+      file:
+        path: /data/zookeper
+        state: directory
+        owner: zookeper
+        group: zookeper
+
+
+# latest kafka version
+# wget https://downloads.apache.org/kafka/3.6.0/kafka_2.12-3.6.0.tgz
