@@ -53,7 +53,8 @@
     
     - name: "Assign id"
       shell: |
-        echo "${`hostname`: -1}" > /var/zookeeper/myid
+        txt=`hostname`
+        echo "${txt: -1}" > /var/zookeeper/myid
     
     - name: "Zookeeper properties"
       copy:
