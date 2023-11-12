@@ -51,7 +51,7 @@
     
     - name: "Zookeper properties"
       copy:
-        src: ./conf/zookeper/zookeper.properties
+        src: "{{ playbook_dir }}/conf/zookeper/zookeper.properties"
         dest: /opt/zookeper/conf/zoo.cfg
         owner: zookeper
         group: zookeper
@@ -60,7 +60,7 @@
     
     - name: "Configure systemd service"
       copy:
-        src: ./conf/systemd/zookeper.service
+        src: "{{ playbook_dir }}/conf/systemd/zookeper.service"
         dest: /etc/systemd/system/zookeeper.service
         owner: root
         group: root
