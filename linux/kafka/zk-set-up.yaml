@@ -1,3 +1,8 @@
+# Requirements
+# Name your servers like, that way the myid file will contain its id:
+# zookeper1
+# zookeper2
+# zookeper3
 - name: "Set up Zookeepers"
   hosts: all
   vars:
