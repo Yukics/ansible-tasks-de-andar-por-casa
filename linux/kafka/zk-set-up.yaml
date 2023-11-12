@@ -26,7 +26,7 @@
 
     - name: "Download zookeper and kafka"
       shell: |
-        wget https://www.apache.org/dyn/closer.lua/zookeeper/zookeeper-3.8.3/apache-zookeeper-3.8.3-bin.tar.gz
+        wget https://dlcdn.apache.org/zookeeper/zookeeper-3.8.3/apache-zookeeper-3.8.3-bin.tar.gz
         tar -xvf apache-zookeeper-3.8.3-bin.tar.gz
         rm apache-zookeeper-3.8.3-bin.tar.gz
         mv apache-zookeeper-3.8.3-bin /opt/zookeper
