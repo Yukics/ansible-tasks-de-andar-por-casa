@@ -40,6 +40,9 @@
         mv -f kafka_2.12-{{ version }} kafka
         mv -f kafka /opt/
     
+    - name: "Modify file descriptors limits"
+      shell: echo "* hard nofile 100000 * soft nofile 100000" | sudo tee --append /etc/security/limits.conf
+
     - name: "Set up kafka folder permissions"
       file:
         path: /opt/kafka
@@ -66,7 +69,7 @@
     
     - name: "Kafka properties"
       copy:
-        dest: /opt/kafka/conf/server.properties
+        dest: /opt/kafka/config/server.properties
         owner: kafka
         group: kafka
         mode: '0644'
