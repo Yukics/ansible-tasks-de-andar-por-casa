@@ -1,0 +1,163 @@
+# Requirements
+# Name your servers like, that way the myid file will contain its id:
+# zookeper1
+# zookeper2
+# zookeper3
+- name: "Set up Zookeepers"
+  hosts: all
+  vars:
+    version: 3.6.0
+  tasks:
+    - name: "Apt update and install packages"
+      apt:
+        update_cache: yes
+        pkg:
+        - ca-certificates
+        - zip
+        - net-tools
+        - vim
+        - nano
+        - tar
+        - netcat
+        - openjdk-8-jdk
+    
+    - name: "Disable swappiness"
+      shell: |
+        sysctl vm.swappiness=1
+        echo 'vm.swappiness=1' | sudo tee --append /etc/sysctl.conf
+
+    - name: "Create kafka user"
+      user:
+        name: kafka
+        shell: /usr/sbin/nologin
+
+    - name: "Download kafka and install"
+      ignore_errors: true
+      shell: |
+        wget https://downloads.apache.org/kafka/{{ version }}/kafka_2.12-{{ version }}.tgz
+        tar -xvf kafka_2.12-{{ version }}.tgz
+        rm kafka_2.12-{{ version }}.tgz
+        mv -f kafka_2.12-{{ version }} kafka
+        mv -f kafka /opt/
+    
+    - name: "Set up kafka folder permissions"
+      file:
+        path: /opt/kafka
+        state: directory
+        owner: kafka
+        group: kafka
+        recurse: yes
+    
+    - name: "Create data kafka folder"
+      file:
+        path: /var/kafka
+        state: directory
+        owner: kafka
+        group: kafka
+        recurse: yes
+    
+    - name: "Assign id"
+      shell: |
+        txt=`hostname`
+        echo "${txt: -1}"
+      args:
+        executable: /bin/bash
+      register: id
+    
+    - name: "Kafka properties"
+      copy:
+        dest: /opt/kafka/conf/server.properties
+        owner: kafka
+        group: kafka
+        mode: '0644'
+        content: |
+          ############################# Server Basics #############################
+
+          # The id of the broker. This must be set to a unique integer for each broker.
+          broker.id={{ id.stdout }}
+          # change your.host.name by your machine's IP or hostname
+          advertised.listeners=PLAINTEXT://kfk{{ id.stdout }}:9092
+
+          # Switch to enable topic deletion or not, default value is false
+          delete.topic.enable=true
+
+          ############################# Log Basics #############################
+
+          # A comma seperated list of directories under which to store log files
+          log.dirs=/var/kafka
+
+          # The default number of log partitions per topic. More partitions allow greater
+          # parallelism for consumption, but this will also result in more files across
+          # the brokers.
+          num.partitions=8
+          # we will have 3 brokers so the default replication factor should be 2 or 3
+          default.replication.factor=3
+          # number of ISR to have in order to minimize data loss
+          min.insync.replicas=2
+
+          ############################# Log Retention Policy #############################
+
+          # The minimum age of a log file to be eligible for deletion due to age
+          # this will delete data after a week
+          log.retention.hours=168
+
+          # The maximum size of a log segment file. When this size is reached a new log segment will be created.
+          log.segment.bytes=1073741824
+
+          # The interval at which log segments are checked to see if they can be deleted according
+          # to the retention policies
+          log.retention.check.interval.ms=300000
+
+          ############################# Zookeeper #############################
+
+          # Zookeeper connection string (see zookeeper docs for details).
+          # This is a comma separated host:port pairs, each corresponding to a zk
+          # server. e.g. "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002".
+          # You can also append an optional chroot string to the urls to specify the
+          # root directory for all kafka znodes.
+          zookeeper.connect=zk1:2181,zk2:2181,zk3:2181/kafka
+
+          # Timeout in ms for connecting to zookeeper
+          zookeeper.connection.timeout.ms=6000
+
+
+          ############################## Other ##################################
+          # I recommend you set this to false in production.
+          # We'll keep it as true for the course
+          auto.create.topics.enable=true
+
+    - name: "Configure systemd service"
+      copy:
+        dest: /etc/systemd/system/kafka.service
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Apache Kafka server (broker)
+          Documentation=http://kafka.apache.org/documentation.html
+          Requires=network.target
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=kafka
+          Group=kafka
+          Enviroment="JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre"
+          ExecStart=/opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/server.properties
+          ExecStop=/opt/kafka/bin/kafka-server-stop.sh
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: "systemctl daemon-reload"
+      shell: systemctl daemon-reload
+
+    - name: Start service kafka and enable it
+      service:
+        name: kafka
+        state: started
+        enabled: yes
+
+# latest kafka version
+# wget https://downloads.apache.org/kafka/3.6.0/kafka_2.12-3.6.0.tgz
