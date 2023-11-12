@@ -1,4 +1,4 @@
-- name: "Set up Zookepers"
+- name: "Set up Zookeepers"
   hosts: all
   vars:
     version: 3.8.3
@@ -21,12 +21,12 @@
         sysctl vm.swappiness=1
         echo 'vm.swappiness=1' | sudo tee --append /etc/sysctl.conf
 
-    - name: "Create zookeper user"
+    - name: "Create zookeeper user"
       user:
-        name: zookeper
+        name: zookeeper
         shell: /usr/sbin/nologin
 
-    - name: "Download zookeper and kafka"
+    - name: "Download zookeeper and kafka"
       ignore_errors: true
       shell: |
         wget https://dlcdn.apache.org/zookeeper/zookeeper-{{ version }}/apache-zookeeper-{{ version }}-bin.tar.gz
@@ -35,28 +35,28 @@
         mv -f apache-zookeeper-{{ version }}-bin zookeeper
         mv -f zookeeper /opt/
     
-    - name: "Set up zookeper folder permissions"
+    - name: "Set up zookeeper folder permissions"
       file:
-        path: /opt/zookeper
+        path: /opt/zookeeper
         state: directory
-        owner: zookeper
-        group: zookeper
+        owner: zookeeper
+        group: zookeeper
         recurse: yes
     
-    - name: "Create data zookeper folder"
+    - name: "Create data zookeeper folder"
       file:
         path: /var/zookeeper
         state: directory
-        owner: zookeper
-        group: zookeper
+        owner: zookeeper
+        group: zookeeper
         recurse: yes
     
-    - name: "Zookeper properties"
+    - name: "Zookeeper properties"
       copy:
-        # src: "{{ playbook_dir }}/conf/zookeper/zookeper.properties"
-        dest: /opt/zookeper/conf/zoo.cfg
-        owner: zookeper
-        group: zookeper
+        # src: "{{ playbook_dir }}/conf/zookeeper/zookeeper.properties"
+        dest: /opt/zookeeper/conf/zoo.cfg
+        owner: zookeeper
+        group: zookeeper
         mode: '0644'
         content: |
           # the location to store the in-memory database snapshots and, unless specified otherwise, the transaction log of updates to the database.
@@ -80,7 +80,7 @@
     
     - name: "Configure systemd service"
       copy:
-        # src: ./conf/systemd/zookeper.service
+        # src: ./conf/systemd/zookeeper.service
         dest: /etc/systemd/system/zookeeper.service
         owner: root
         group: root
@@ -109,7 +109,7 @@
     - name: "systemctl daemon-reload"
       shell: systemctl daemon-reload
 
-    - name: Start service zookeper and enable it
+    - name: Start service zookeeper and enable it
       service:
         name: zookeeper
         state: started
